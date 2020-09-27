@@ -172,14 +172,14 @@ var zstd = Migration{
 		var samples [][]byte
 
 		total := 0
-		c := tx.(ethdb.HasTx).Tx().Cursor(dbutils.BlockReceiptsPrefix)
+		c := tx.(ethdb.HasTx).Tx().Cursor(dbutils.BlockBodyPrefix)
 		for k, v, err := c.First(); k != nil; k, v, err = c.Next() {
 			if err != nil {
 				return err
 			}
 			total += len(v)
 			blockNum := binary.BigEndian.Uint64(k)
-			if blockNum%21 == 0 {
+			if blockNum%21 != 0 {
 				continue
 			}
 			samples = append(samples, v)
@@ -256,6 +256,14 @@ var zstd = Migration{
 		defer cd128.Release()
 		fmt.Printf("dict128: %s\n", time.Since(t))
 
+		dict256 := gozstd.BuildDict(samples, 256*1024)
+		cd256, err := gozstd.NewCDictLevel(dict256, gozstd.DefaultCompressionLevel)
+		if err != nil {
+			return err
+		}
+		defer cd256.Release()
+		fmt.Printf("dict256: %s\n", time.Since(t))
+
 		t = time.Now()
 		//total4 := 0
 		//total8 := 0
@@ -264,6 +272,7 @@ var zstd = Migration{
 		total32 := 0
 		total64 := 0
 		total128 := 0
+		total256 := 0
 		buf := make([]byte, 0, 1024)
 		for k, v, err := c.First(); k != nil; k, v, err = c.Next() {
 			if err != nil {
@@ -288,6 +297,8 @@ var zstd = Migration{
 			total64 += len(buf)
 			buf = gozstd.CompressDict(buf[:0], v, cd128)
 			total128 += len(buf)
+			buf = gozstd.CompressDict(buf[:0], v, cd256)
+			total256 += len(buf)
 			select {
 			default:
 			case <-logEvery.C:
@@ -299,6 +310,7 @@ var zstd = Migration{
 					"total32", common.StorageSize(total32),
 					"total64", common.StorageSize(total64),
 					"total128", common.StorageSize(total128),
+					"total256", common.StorageSize(total256),
 				)
 			}
 		}
