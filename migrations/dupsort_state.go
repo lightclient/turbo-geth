@@ -168,7 +168,7 @@ var zstd = Migration{
 		var samples [][]byte
 
 		total := 0
-		c := tx.(ethdb.HasTx).Tx().Cursor(dbutils.BlockReceiptsPrefix)
+		c := tx.(ethdb.HasTx).Tx().Cursor(dbutils.BlockBodyPrefix)
 		for k, v, err := c.First(); k != nil; k, v, err = c.Next() {
 			if err != nil {
 				return err
@@ -179,7 +179,6 @@ var zstd = Migration{
 				continue
 			}
 			samples = append(samples, v)
-
 			if blockNum >= 6_000_000 {
 				break
 			}
