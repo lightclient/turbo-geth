@@ -2,16 +2,15 @@ package migrations
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/ledgerwatch/turbo-geth/common"
+	"github.com/ledgerwatch/turbo-geth/log"
+	"github.com/valyala/gozstd"
 	"time"
 
-	"github.com/ledgerwatch/turbo-geth/common"
 	"github.com/ledgerwatch/turbo-geth/common/dbutils"
 	"github.com/ledgerwatch/turbo-geth/common/etl"
 	"github.com/ledgerwatch/turbo-geth/ethdb"
-	"github.com/ledgerwatch/turbo-geth/log"
 	"github.com/ledgerwatch/turbo-geth/turbo/trie"
-	"github.com/valyala/gozstd"
 )
 
 var dupSortHashState = Migration{
@@ -180,7 +179,7 @@ var zstd = Migration{
 			}
 			total += len(v)
 			blockNum := binary.BigEndian.Uint64(k)
-			if rand.Intn(10) <= 1 {
+			if blockNum%21 == 0 {
 				continue
 			}
 			samples = append(samples, v)
