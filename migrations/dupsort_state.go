@@ -170,6 +170,7 @@ var zstd = Migration{
 
 		// train
 		var samples [][]byte
+		var samples10k [][]byte
 
 		total := 0
 		c := tx.(ethdb.HasTx).Tx().Cursor(dbutils.BlockBodyPrefix)
@@ -179,6 +180,9 @@ var zstd = Migration{
 			}
 			total += len(v)
 			blockNum := binary.BigEndian.Uint64(k)
+			if blockNum%10_000 == 0 {
+				samples10k = append(samples10k, v)
+			}
 			if blockNum%64 == 0 {
 				samples = append(samples, v)
 			}
@@ -223,6 +227,10 @@ var zstd = Migration{
 		dict128 := gozstd.BuildDict(samples, 128*1024)
 		fmt.Printf("dict128: %s\n", time.Since(t))
 
+		t = time.Now()
+		dict128_10k := gozstd.BuildDict(samples10k, 128*1024)
+		fmt.Printf("dict128_10k: %s\n", time.Since(t))
+
 		//t = time.Now()
 		//dict256 := gozstd.BuildDict(samples, 256*1024)
 		//cd256, err := gozstd.NewCDictLevel(dict256, -1)
@@ -243,6 +251,12 @@ var zstd = Migration{
 		}
 		defer cd128_minus2.Release()
 
+		cd128_s10k_minus2, err := gozstd.NewCDictLevel(dict128_10k, -2)
+		if err != nil {
+			panic(err)
+		}
+		defer cd128_s10k_minus2.Release()
+
 		cd128_minus1, err := gozstd.NewCDictLevel(dict128, -1)
 		if err != nil {
 			panic(err)
@@ -255,29 +269,11 @@ var zstd = Migration{
 		}
 		defer cd128_0.Release()
 
-		cd128_1, err := gozstd.NewCDictLevel(dict128, 1)
-		if err != nil {
-			panic(err)
-		}
-		defer cd128_1.Release()
-
-		cd128_2, err := gozstd.NewCDictLevel(dict128, 2)
-		if err != nil {
-			panic(err)
-		}
-		defer cd128_2.Release()
-
-		cd128_3, err := gozstd.NewCDictLevel(dict128, 3)
-		if err != nil {
-			panic(err)
-		}
-		defer cd128_3.Release()
-
-		cd128_4, err := gozstd.NewCDictLevel(dict128, 4)
-		if err != nil {
-			panic(err)
-		}
-		defer cd128_4.Release()
+		//cd128_1, err := gozstd.NewCDictLevel(dict128, 1)
+		//if err != nil {
+		//	panic(err)
+		//}
+		//defer cd128_1.Release()
 
 		//cd128_19, err := gozstd.NewCDictLevel(dict128, 19)
 		//if err != nil {
@@ -297,9 +293,9 @@ var zstd = Migration{
 		//total64_minus3 := 0
 		total128_minus3 := 0
 		total128_minus2 := 0
+		total128_10k_minus2 := 0
 		total128_minus1 := 0
 		//total128_0 := 0
-		total128_1 := 0
 		//total128_2 := 0
 		//total128_3 := 0
 		//total128_4 := 0
@@ -314,8 +310,8 @@ var zstd = Migration{
 		total = 0
 		var d_minus3 time.Duration
 		var d_minus2 time.Duration
+		var d_10k_minus2 time.Duration
 		var d_minus1 time.Duration
-		var d_1 time.Duration
 		buf := make([]byte, 0, 1024)
 		for k, v, err := c.First(); k != nil; k, v, err = c.Next() {
 			if err != nil {
@@ -343,19 +339,14 @@ var zstd = Migration{
 			//t64_minus3 := time.Since(t)
 
 			t = time.Now()
-			buf = gozstd.CompressDict(buf[:0], v, cd128_minus3)
-			total128_minus3 += len(buf)
-			d_minus3 += time.Since(t)
-
-			t = time.Now()
 			buf = gozstd.CompressDict(buf[:0], v, cd128_minus2)
-			total128_minus2 += len(buf)
 			d_minus2 += time.Since(t)
+			total128_minus2 += len(buf)
 
 			t = time.Now()
 			buf = gozstd.CompressDict(buf[:0], v, cd128_minus1)
-			total128_minus1 += len(buf)
 			d_minus1 += time.Since(t)
+			total128_minus1 += len(buf)
 
 			//t = time.Now()
 			//buf = gozstd.CompressDict(buf[:0], v, cd128_0)
@@ -363,9 +354,9 @@ var zstd = Migration{
 			//t128_0 := time.Since(t)
 
 			t = time.Now()
-			buf = gozstd.CompressDict(buf[:0], v, cd128_1)
-			total128_1 += len(buf)
-			d_1 += time.Since(t)
+			buf = gozstd.CompressDict(buf[:0], v, cd128_s10k_minus2)
+			d_10k_minus2 += time.Since(t)
+			total128_10k_minus2 += len(buf)
 
 			//t = time.Now()
 			//buf = gozstd.CompressDict(buf[:0], v, cd128_2)
@@ -403,9 +394,10 @@ var zstd = Migration{
 					//"128_3", fmt.Sprintf("%.2f", totalf/float64(total128_3)), "t128_3", t128_3,
 					"128_minus3", fmt.Sprintf("%.2f", totalf/float64(total128_minus3)), "d_minus3", d_minus3,
 					"128_minus2", fmt.Sprintf("%.2f", totalf/float64(total128_minus2)), "d_minus2", d_minus2,
-					"128_minus1", fmt.Sprintf("%.2f", totalf/float64(total128_minus1)), "d_minus1", d_minus1,
+					"128_minus2", fmt.Sprintf("%.2f", totalf/float64(total128_minus2)), "d_minus2", d_minus2,
+					"128_10k_minus2", fmt.Sprintf("%.2f", totalf/float64(total128_10k_minus2)), "d_10k_minus2", d_10k_minus2,
 					//"128_0", fmt.Sprintf("%.2f", totalf/float64(total128_0)), "t128_0", t128_0,
-					"128_1", fmt.Sprintf("%.2f", totalf/float64(total128_1)), "d_1", d_1,
+					//"128_1", fmt.Sprintf("%.2f", totalf/float64(total128_1)), "d_1", d_1,
 					//"128_2", fmt.Sprintf("%.2f", totalf/float64(total128_2)), "t128_2", t128_2,
 					//"128_3", fmt.Sprintf("%.2f", totalf/float64(total128_3)), "t128_3", t128_3,
 					//"128_4", fmt.Sprintf("%.2f", totalf/float64(total128_4)), "t128_4", t128_4,
