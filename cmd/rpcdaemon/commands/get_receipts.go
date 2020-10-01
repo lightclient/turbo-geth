@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/RoaringBitmap/gocroaring"
+	"github.com/RoaringBitmap/roaring"
 	"github.com/ledgerwatch/turbo-geth/common"
 	"github.com/ledgerwatch/turbo-geth/common/dbutils"
 	"github.com/ledgerwatch/turbo-geth/common/hexutil"
@@ -106,7 +106,7 @@ func (api *APIImpl) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([
 		}
 	}
 
-	blockNumbers := gocroaring.New()
+	blockNumbers := roaring.New()
 	blockNumbers.AddRange(begin, end+1) // [min,max)
 
 	topicsBitmap, err := getTopicsBitmap(tx.(ethdb.HasTx).Tx().Cursor(dbutils.LogTopicIndex), crit.Topics)
@@ -122,7 +122,7 @@ func (api *APIImpl) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([
 	}
 
 	logAddrIndex := tx.(ethdb.HasTx).Tx().Cursor(dbutils.LogAddressIndex)
-	var addrBitmap *gocroaring.Bitmap
+	var addrBitmap *roaring.Bitmap
 	for _, addr := range crit.Addresses {
 		m, err := bitmapdb.Get(logAddrIndex, addr[:])
 		if err != nil {
@@ -131,7 +131,7 @@ func (api *APIImpl) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([
 		if addrBitmap == nil {
 			addrBitmap = m
 		} else {
-			addrBitmap = gocroaring.Or(addrBitmap, m)
+			addrBitmap = roaring.Or(addrBitmap, m)
 		}
 	}
 
@@ -143,7 +143,7 @@ func (api *APIImpl) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([
 		}
 	}
 
-	if blockNumbers.Cardinality() == 0 {
+	if blockNumbers.GetCardinality() == 0 {
 		return returnLogs(logs), nil
 	}
 
@@ -178,10 +178,10 @@ func (api *APIImpl) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([
 // {{}, {B}}          matches any topic in first position AND B in second position
 // {{A}, {B}}         matches topic A in first position AND B in second position
 // {{A, B}, {C, D}}   matches topic (A OR B) in first position AND (C OR D) in second position
-func getTopicsBitmap(c ethdb.Cursor, topics [][]common.Hash) (*gocroaring.Bitmap, error) {
-	var result *gocroaring.Bitmap
+func getTopicsBitmap(c ethdb.Cursor, topics [][]common.Hash) (*roaring.Bitmap, error) {
+	var result *roaring.Bitmap
 	for _, sub := range topics {
-		var bitmapForORing *gocroaring.Bitmap
+		var bitmapForORing *roaring.Bitmap
 		for _, topic := range sub {
 			m, err := bitmapdb.Get(c, topic[:])
 			if err != nil {
@@ -190,7 +190,7 @@ func getTopicsBitmap(c ethdb.Cursor, topics [][]common.Hash) (*gocroaring.Bitmap
 			if bitmapForORing == nil {
 				bitmapForORing = m
 			} else {
-				bitmapForORing = gocroaring.FastOr(bitmapForORing, m)
+				bitmapForORing = roaring.FastOr(bitmapForORing, m)
 			}
 		}
 
@@ -198,7 +198,7 @@ func getTopicsBitmap(c ethdb.Cursor, topics [][]common.Hash) (*gocroaring.Bitmap
 			if result == nil {
 				result = bitmapForORing
 			} else {
-				result = gocroaring.And(bitmapForORing, result)
+				result = roaring.And(bitmapForORing, result)
 			}
 		}
 	}
