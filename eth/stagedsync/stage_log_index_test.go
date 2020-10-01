@@ -58,19 +58,19 @@ func TestLogIndex(t *testing.T) {
 
 	m, err := bitmapdb.Get(logAddrIndex, addr1[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logAddrIndex, addr2[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic1[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic2[:])
 	require.NoError(err)
-	require.Equal(2, int(m.Cardinality()))
+	require.Equal(2, int(m.GetCardinality()))
 
 	// Unwind test
 	err = unwindLogIndex(tx, 2, 1, nil)
@@ -78,19 +78,19 @@ func TestLogIndex(t *testing.T) {
 
 	m, err = bitmapdb.Get(logAddrIndex, addr1[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logAddrIndex, addr2[:])
 	require.NoError(err)
-	require.Equal(0, int(m.Cardinality()))
+	require.Equal(0, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic1[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic2[:])
 	require.NoError(err)
-	require.Equal(1, int(m.Cardinality()))
+	require.Equal(1, int(m.GetCardinality()))
 
 	// Unwind test
 	err = unwindLogIndex(tx, 1, 0, nil)
@@ -98,17 +98,17 @@ func TestLogIndex(t *testing.T) {
 
 	m, err = bitmapdb.Get(logAddrIndex, addr1[:])
 	require.NoError(err)
-	require.Equal(0, int(m.Cardinality()))
+	require.Equal(0, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logAddrIndex, addr2[:])
 	require.NoError(err)
-	require.Equal(0, int(m.Cardinality()))
+	require.Equal(0, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic1[:])
 	require.NoError(err)
-	require.Equal(0, int(m.Cardinality()))
+	require.Equal(0, int(m.GetCardinality()))
 
 	m, err = bitmapdb.Get(logTopicIndex, topic2[:])
 	require.NoError(err)
-	require.Equal(0, int(m.Cardinality()))
+	require.Equal(0, int(m.GetCardinality()))
 }
